@@ -172,7 +172,3 @@ B.Tech, Computer Science and Engineering
 National Institute of Technology Warangal
 
 ---
-
-## License
-
-This project was developed for educational purposes as part of a Database Management System course.
