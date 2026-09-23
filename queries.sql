@@ -1,24 +1,4 @@
--- ============================================================================
--- Blood Bank & Emergency Donor-Matching System
--- Advanced SQL Queries — PostgreSQL
--- ============================================================================
--- DEPENDENCY: Execute schema.sql → triggers.sql → procedures.sql → seed.sql
---
--- This file contains 32 production-quality analytical queries demonstrating:
---   INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN,
---   GROUP BY, HAVING, Subqueries, Correlated Subqueries, CTEs,
---   Recursive CTE, Window Functions (ROW_NUMBER, RANK, DENSE_RANK),
---   CASE, COALESCE, Aggregate Functions
---
--- Each query is numbered, titled, and commented for clarity.
--- ============================================================================
 
-
--- ============================================================================
--- Q01: AVAILABLE BLOOD INVENTORY SUMMARY
---      JOIN blood_units → donors to resolve blood type (3NF design).
---      GROUP BY blood type, count available non-expired units.
--- ============================================================================
 SELECT d.blood_group,
        d.rh_factor,
        COUNT(*)                    AS available_units,
@@ -33,11 +13,6 @@ GROUP BY d.blood_group, d.rh_factor
 ORDER BY d.blood_group, d.rh_factor;
 
 
--- ============================================================================
--- Q02: BLOOD UNITS NEARING EXPIRY (within 7 days)
---      Identifies AVAILABLE units that will expire within one week.
---      Uses CASE to flag urgency level based on days remaining.
--- ============================================================================
 SELECT bu.unit_id,
        d.blood_group,
        d.rh_factor,
@@ -55,11 +30,6 @@ WHERE  bu.status = 'AVAILABLE'
 ORDER BY bu.expiration_date ASC;
 
 
--- ============================================================================
--- Q03: EXPIRED BLOOD UNITS REPORT
---      Full detail of all expired units including donor info.
---      Demonstrates LEFT JOIN and COALESCE.
--- ============================================================================
 SELECT bu.unit_id,
        COALESCE(d.first_name || ' ' || d.last_name, 'Unknown Donor') AS donor_name,
        d.blood_group,
@@ -74,11 +44,7 @@ WHERE  bu.status = 'EXPIRED'
 ORDER BY bu.expiration_date DESC;
 
 
--- ============================================================================
--- Q04: MONTHLY DONATION TREND
---      Aggregates blood unit collections by month.
---      Uses date_trunc for monthly grouping.
--- ============================================================================
+
 SELECT date_trunc('month', bu.collection_date)::DATE AS month,
        COUNT(*)                                       AS units_collected,
        COUNT(DISTINCT bu.donor_id)                    AS unique_donors,
@@ -88,10 +54,7 @@ GROUP BY date_trunc('month', bu.collection_date)
 ORDER BY month DESC;
 
 
--- ============================================================================
--- Q05: TOP 10 DONORS BY TOTAL DONATIONS
---      RANK window function over donation count.
--- ============================================================================
+
 SELECT d.donor_id,
        d.first_name || ' ' || d.last_name AS donor_name,
        d.blood_group,
@@ -105,10 +68,6 @@ ORDER BY total_donations DESC
 LIMIT 10;
 
 
--- ============================================================================
--- Q06: DONATION FREQUENCY PER DONOR (days between donations)
---      Uses LAG window function to calculate inter-donation intervals.
--- ============================================================================
 SELECT d.donor_id,
        d.first_name || ' ' || d.last_name AS donor_name,
        bu.unit_id,
@@ -124,10 +83,7 @@ INNER JOIN blood_units bu ON bu.donor_id = d.donor_id
 ORDER BY d.donor_id, bu.collection_date;
 
 
--- ============================================================================
--- Q07: HOSPITAL REQUEST STATISTICS
---      Total requests, average quantity, fulfillment breakdown per hospital.
--- ============================================================================
+
 SELECT h.hospital_id,
        h.name AS hospital_name,
        h.priority_level,
@@ -144,10 +100,6 @@ GROUP BY h.hospital_id, h.name, h.priority_level
 ORDER BY total_requests DESC;
 
 
--- ============================================================================
--- Q08: MOST FREQUENTLY REQUESTED BLOOD GROUP
---      Subquery to find the max, correlated comparison.
--- ============================================================================
 SELECT br.requested_blood_group,
        br.requested_rh_factor,
        COUNT(*)       AS request_count,
@@ -164,10 +116,7 @@ HAVING COUNT(*) = (
 ORDER BY total_units_demanded DESC;
 
 
--- ============================================================================
--- Q09: HOSPITAL FULFILLMENT PERCENTAGE (CTE)
---      Uses CTE to calculate per-hospital fulfillment rates.
--- ============================================================================
+
 WITH request_stats AS (
     SELECT hospital_id,
            COUNT(*)                                                       AS total,
@@ -188,10 +137,6 @@ INNER JOIN hospitals h ON h.hospital_id = rs.hospital_id
 ORDER BY fulfillment_pct DESC;
 
 
--- ============================================================================
--- Q10: PENDING REQUESTS ORDERED BY URGENCY
---      Prioritises EMERGENCY > URGENT > ROUTINE using CASE.
--- ============================================================================
 SELECT br.request_id,
        h.name                                        AS hospital_name,
        h.priority_level,
@@ -211,10 +156,7 @@ WHERE  br.fulfillment_status = 'PENDING'
 ORDER BY priority_score ASC, br.requested_at ASC;
 
 
--- ============================================================================
--- Q11: EMERGENCY REQUESTS & FULFILLMENT STATUS
---      Focuses on EMERGENCY urgency across all statuses.
--- ============================================================================
+
 SELECT br.request_id,
        h.name                    AS hospital_name,
        br.requested_blood_group,
@@ -233,10 +175,7 @@ WHERE  br.urgency = 'EMERGENCY'
 ORDER BY br.requested_at DESC;
 
 
--- ============================================================================
--- Q12: AVERAGE INVENTORY AGE (days since collection, AVAILABLE units only)
---      Demonstrates aggregate over date arithmetic.
--- ============================================================================
+
 SELECT d.blood_group,
        d.rh_factor,
        COUNT(*)                                                     AS available_units,
@@ -251,10 +190,6 @@ GROUP BY d.blood_group, d.rh_factor
 ORDER BY avg_age_days DESC;
 
 
--- ============================================================================
--- Q13: DETAILED RESERVATION HISTORY (Multi-table JOIN)
---      Joins all five tables for a complete reservation audit trail.
--- ============================================================================
 SELECT ur.reservation_id,
        ur.reserved_at,
        bu.unit_id,
@@ -274,10 +209,7 @@ INNER JOIN hospitals h       ON h.hospital_id  = br.hospital_id
 ORDER BY ur.reserved_at DESC;
 
 
--- ============================================================================
--- Q14: UNITS ISSUED PER MONTH
---      Tracks how many units were issued (status = USED) per month.
--- ============================================================================
+
 SELECT date_trunc('month', ur.reserved_at)::DATE AS month,
        COUNT(*)                                   AS units_issued
 FROM   blood_units bu
@@ -287,10 +219,7 @@ GROUP BY date_trunc('month', ur.reserved_at)
 ORDER BY month DESC;
 
 
--- ============================================================================
--- Q15: BLOOD UTILIZATION RATE
---      Calculates percentage of units that were actually used vs wasted.
--- ============================================================================
+
 SELECT d.blood_group,
        d.rh_factor,
        COUNT(*)                                              AS total_units,
@@ -312,10 +241,7 @@ GROUP BY d.blood_group, d.rh_factor
 ORDER BY utilization_pct DESC;
 
 
--- ============================================================================
--- Q16: BLOOD WASTAGE REPORT (EXPIRED units analysis)
---      Aggregates expired units to identify wastage patterns.
--- ============================================================================
+
 SELECT d.blood_group,
        d.rh_factor,
        COUNT(*)                AS expired_count,
@@ -330,10 +256,7 @@ GROUP BY d.blood_group, d.rh_factor
 ORDER BY expired_count DESC;
 
 
--- ============================================================================
--- Q17: BLOOD GROUP DISTRIBUTION AMONG DONORS
---      Cross-tabulation of blood types with percentages.
--- ============================================================================
+
 SELECT d.blood_group,
        d.rh_factor,
        COUNT(*)                                                  AS donor_count,
@@ -344,11 +267,6 @@ GROUP BY d.blood_group, d.rh_factor
 ORDER BY donor_count DESC;
 
 
--- ============================================================================
--- Q18: DONOR ACTIVITY REPORT
---      LEFT JOIN to include donors with zero donations.
---      CASE to categorise activity level.
--- ============================================================================
 SELECT d.donor_id,
        d.first_name || ' ' || d.last_name AS donor_name,
        d.blood_group,
@@ -368,10 +286,6 @@ GROUP BY d.donor_id, d.first_name, d.last_name, d.blood_group, d.rh_factor, d.is
 ORDER BY total_donations DESC;
 
 
--- ============================================================================
--- Q19: HOSPITAL DEMAND VS SUPPLY ANALYSIS (FULL JOIN demonstration)
---      Compares requested blood types with available supply.
--- ============================================================================
 WITH demand AS (
     SELECT requested_blood_group AS blood_group,
            requested_rh_factor   AS rh_factor,
@@ -402,11 +316,6 @@ FULL OUTER JOIN supply sup
 ORDER BY surplus_deficit ASC;
 
 
--- ============================================================================
--- Q20: INVENTORY TURNOVER RATE
---      Measures how quickly blood units are consumed (USED / total).
---      Uses CTE and window function.
--- ============================================================================
 WITH monthly AS (
     SELECT date_trunc('month', bu.collection_date)::DATE AS month,
            COUNT(*)                                       AS collected,
@@ -426,10 +335,7 @@ FROM   monthly
 ORDER BY month DESC;
 
 
--- ============================================================================
--- Q21: DONOR RANKING BY DONATION COUNT (Window: DENSE_RANK)
---      Ranks all active donors by their total blood donations.
--- ============================================================================
+
 SELECT d.donor_id,
        d.first_name || ' ' || d.last_name AS donor_name,
        d.blood_group,
@@ -444,10 +350,6 @@ GROUP BY d.donor_id, d.first_name, d.last_name, d.blood_group, d.rh_factor
 ORDER BY dense_rank;
 
 
--- ============================================================================
--- Q22: HOSPITALS WITH ABOVE-AVERAGE REQUEST RATES (Correlated Subquery)
---      Identifies hospitals that request more blood than the average.
--- ============================================================================
 SELECT h.hospital_id,
        h.name,
        h.priority_level,
@@ -467,9 +369,6 @@ HAVING SUM(br.quantity) > (
 ORDER BY total_units DESC;
 
 
--- ============================================================================
--- Q23: HOSPITAL RANKING BY TOTAL DEMAND (Window: RANK)
--- ============================================================================
 SELECT h.hospital_id,
        h.name                                                      AS hospital_name,
        h.priority_level,
@@ -482,10 +381,6 @@ GROUP BY h.hospital_id, h.name, h.priority_level
 ORDER BY demand_rank;
 
 
--- ============================================================================
--- Q24: EMERGENCY FULFILLMENT SPEED (CTE + Window)
---      Calculates response time for fulfilled emergency requests.
--- ============================================================================
 WITH emergency AS (
     SELECT br.request_id,
            h.name AS hospital_name,
@@ -513,10 +408,7 @@ FROM   emergency
 ORDER BY speed_rank;
 
 
--- ============================================================================
--- Q25: DAILY DONATION REPORT (parameterisable date range)
---      Replace the date literals with your desired range.
--- ============================================================================
+
 SELECT bu.collection_date,
        COUNT(*)                        AS units_collected,
        COUNT(DISTINCT bu.donor_id)     AS unique_donors,
@@ -530,10 +422,7 @@ GROUP BY bu.collection_date
 ORDER BY bu.collection_date;
 
 
--- ============================================================================
--- Q26: WEEKLY INVENTORY SNAPSHOT (Window: running total by week)
---      Tracks cumulative units collected per ISO week.
--- ============================================================================
+
 SELECT EXTRACT(ISOYEAR FROM bu.collection_date)::INT AS year,
        EXTRACT(WEEK    FROM bu.collection_date)::INT AS week_number,
        COUNT(*)                                       AS units_this_week,
@@ -547,10 +436,6 @@ GROUP BY EXTRACT(ISOYEAR FROM bu.collection_date),
 ORDER BY year, week_number;
 
 
--- ============================================================================
--- Q27: MONTHLY REPORT — COMPREHENSIVE DASHBOARD QUERY
---      Combines collections, reservations, issues, and expirations per month.
--- ============================================================================
 WITH months AS (
     SELECT DISTINCT date_trunc('month', collection_date)::DATE AS month FROM blood_units
     UNION
@@ -581,10 +466,6 @@ LEFT JOIN (
 ) exp ON exp.month = m.month
 ORDER BY m.month DESC;
 
-
--- ============================================================================
--- Q28: YEARLY SUMMARY REPORT
--- ============================================================================
 SELECT EXTRACT(YEAR FROM bu.collection_date)::INT AS year,
        COUNT(*)                                    AS total_collections,
        COUNT(DISTINCT bu.donor_id)                 AS unique_donors,
@@ -598,10 +479,7 @@ GROUP BY EXTRACT(YEAR FROM bu.collection_date)
 ORDER BY year DESC;
 
 
--- ============================================================================
--- Q29: CROSS JOIN — ALL BLOOD TYPE COMBINATIONS VS CURRENT SUPPLY
---      Generates every possible blood type combination and checks inventory.
--- ============================================================================
+
 WITH all_types AS (
     SELECT bg.bg, rh.rh
     FROM   (VALUES ('A'),('B'),('AB'),('O'))          AS bg(bg),
@@ -628,11 +506,6 @@ LEFT JOIN inventory i ON i.bg = t.bg AND i.rh = t.rh
 ORDER BY t.bg, t.rh;
 
 
--- ============================================================================
--- Q30: RECURSIVE CTE — BLOOD TYPE COMPATIBILITY CHAIN
---      Models a simplified blood type compatibility tree using recursive CTE.
---      (O- is universal donor; AB+ is universal recipient)
--- ============================================================================
 WITH RECURSIVE compatibility(donor_type, recipient_type, depth) AS (
     -- Base: direct compatibilities (simplified ABO+Rh rules)
     VALUES
@@ -671,10 +544,7 @@ FROM   compatibility
 ORDER BY donor_type, recipient_type;
 
 
--- ============================================================================
--- Q31: RIGHT JOIN — HOSPITALS WITHOUT ANY REQUESTS
---      Shows all hospitals, even those with zero blood requests.
--- ============================================================================
+
 SELECT h.hospital_id,
        h.name,
        h.priority_level,
@@ -686,10 +556,7 @@ GROUP BY h.hospital_id, h.name, h.priority_level, h.is_active
 ORDER BY total_requests ASC;
 
 
--- ============================================================================
--- Q32: DASHBOARD SUMMARY — SINGLE-ROW AGGREGATE
---      One-shot query for a blood bank operations dashboard.
--- ============================================================================
+
 SELECT (SELECT COUNT(*) FROM donors WHERE is_active = TRUE)              AS active_donors,
        (SELECT COUNT(*) FROM blood_units WHERE status = 'AVAILABLE'
                           AND expiration_date >= CURRENT_DATE)           AS available_units,
