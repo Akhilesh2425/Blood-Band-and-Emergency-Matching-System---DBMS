@@ -1,28 +1,6 @@
--- ============================================================================
--- Blood Bank & Emergency Donor-Matching System
--- Seed Data — PostgreSQL
--- ============================================================================
--- DEPENDENCY: Execute schema.sql → triggers.sql → procedures.sql FIRST.
---
--- DATA SUMMARY:
---   40  donors         (realistic Indian names, mixed blood types)
---   10  hospitals      (mixed priority levels)
---   150 blood units    (50 AVAILABLE, 60 RESERVED, 20 USED, 20 EXPIRED)
---   40  blood requests (17 FULFILLED, 5 PARTIAL, 13 PENDING, 5 CANCELLED)
---   80  reservations   (mapped to FULFILLED + PARTIAL + USED requests)
---
--- BLOOD TYPE KEY (donor assignments):
---   Donors  1-10 : O  POSITIVE        Donors 30-33 : O  NEGATIVE
---   Donors 11-18 : B  POSITIVE        Donors 34-36 : B  NEGATIVE
---   Donors 19-25 : A  POSITIVE        Donors 37-38 : A  NEGATIVE
---   Donors 26-29 : AB POSITIVE        Donors 39-40 : AB NEGATIVE
--- ============================================================================
+
 
 BEGIN;
-
--- ────────────────────────────────────────────────────────────────────────────
--- 1. DONORS (40 rows)
--- ────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO donors (donor_id, first_name, last_name, date_of_birth, blood_group, rh_factor, phone, email, address, is_active, registered_at)
 VALUES
@@ -82,9 +60,6 @@ VALUES
 (39, 'Aadhya',   'Shah',       '1991-07-28', 'AB', 'NEGATIVE', '+91-9876543239', 'aadhya.shah@email.com',    '56 Bodakdev, Ahmedabad, Gujarat',             TRUE, '2025-05-20 13:00:00+05:30'),
 (40, 'Tara',     'Hegde',      '1994-11-14', 'AB', 'NEGATIVE', '+91-9876543240', 'tara.hegde@email.com',     '78 Jayanagar, Bengaluru, Karnataka',           TRUE, '2025-06-01 10:15:00+05:30');
 
--- ────────────────────────────────────────────────────────────────────────────
--- 2. HOSPITALS (10 rows)
--- ────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO hospitals (hospital_id, name, license_number, priority_level, phone, email, address, is_active, registered_at)
 VALUES
@@ -99,18 +74,7 @@ VALUES
 ( 9, 'Lilavati Hospital Mumbai',             'MH-HOSP-2024-009', 'NORMAL',   '+91-2226751209', 'admin@lilavati.com',        'A-791 Bandra Reclamation, Bandra West, Mumbai', TRUE, '2024-09-03 11:30:00+05:30'),
 (10, 'KIMS Thiruvananthapuram',              'KL-HOSP-2024-010', 'NORMAL',   '+91-4712447210', 'admin@kimstvm.com',         'PB No 1, Anayara PO, Thiruvananthapuram',       TRUE, '2024-10-01 09:00:00+05:30');
 
--- ────────────────────────────────────────────────────────────────────────────
--- 3. BLOOD UNITS (150 rows)
---    Status distribution:
---      Units   1- 50 : AVAILABLE  (collected June 2026, expiry July-Aug 2026)
---      Units  51-110 : RESERVED   (collected June 2026, expiry July-Aug 2026)
---      Units 111-130 : USED       (collected May 2026, expiry Jun-Jul 2026)
---      Units 131-150 : EXPIRED    (collected Jan-Feb 2026, expiry Feb-Apr 2026)
--- ────────────────────────────────────────────────────────────────────────────
 
--- === AVAILABLE UNITS (1-50) ===
-
--- O+ (units 1-15, donors 1-10 cycling)
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 1) % 10) + 1,
@@ -120,7 +84,7 @@ SELECT gs,
        450.00
 FROM generate_series(1, 15) gs;
 
--- B+ (units 16-25, donors 11-18 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 16) % 8) + 11,
@@ -130,7 +94,7 @@ SELECT gs,
        450.00
 FROM generate_series(16, 25) gs;
 
--- A+ (units 26-35, donors 19-25 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 26) % 7) + 19,
@@ -140,7 +104,7 @@ SELECT gs,
        450.00
 FROM generate_series(26, 35) gs;
 
--- AB+ (units 36-40, donors 26-29 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 36) % 4) + 26,
@@ -150,7 +114,7 @@ SELECT gs,
        450.00
 FROM generate_series(36, 40) gs;
 
--- O- (units 41-45, donors 30-33 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 41) % 4) + 30,
@@ -160,7 +124,7 @@ SELECT gs,
        450.00
 FROM generate_series(41, 45) gs;
 
--- B- (units 46-48, donors 34-36)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 46) % 3) + 34,
@@ -170,7 +134,7 @@ SELECT gs,
        450.00
 FROM generate_series(46, 48) gs;
 
--- A- (units 49-50, donors 37-38)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 49) % 2) + 37,
@@ -181,9 +145,6 @@ SELECT gs,
 FROM generate_series(49, 50) gs;
 
 
--- === RESERVED UNITS (51-110) ===
-
--- O+ (units 51-70, donors 1-10 cycling)
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 51) % 10) + 1,
@@ -193,7 +154,7 @@ SELECT gs,
        450.00
 FROM generate_series(51, 70) gs;
 
--- B+ (units 71-82, donors 11-18 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 71) % 8) + 11,
@@ -203,7 +164,7 @@ SELECT gs,
        450.00
 FROM generate_series(71, 82) gs;
 
--- A+ (units 83-90, donors 19-25 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 83) % 7) + 19,
@@ -213,7 +174,7 @@ SELECT gs,
        450.00
 FROM generate_series(83, 90) gs;
 
--- AB+ (units 91-94, donors 26-29)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 91) % 4) + 26,
@@ -223,7 +184,6 @@ SELECT gs,
        450.00
 FROM generate_series(91, 94) gs;
 
--- O- (units 95-100, donors 30-33 cycling)
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 95) % 4) + 30,
@@ -233,7 +193,7 @@ SELECT gs,
        450.00
 FROM generate_series(95, 100) gs;
 
--- B- (units 101-105, donors 34-36 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 101) % 3) + 34,
@@ -243,7 +203,7 @@ SELECT gs,
        450.00
 FROM generate_series(101, 105) gs;
 
--- A- (units 106-108, donors 37-38 cycling)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 106) % 2) + 37,
@@ -253,7 +213,7 @@ SELECT gs,
        450.00
 FROM generate_series(106, 108) gs;
 
--- AB- (units 109-110, donors 39-40)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        ((gs - 109) % 2) + 39,
@@ -264,9 +224,7 @@ SELECT gs,
 FROM generate_series(109, 110) gs;
 
 
--- === USED UNITS (111-130) ===
 
--- O+ (units 111-120, donors 1-10)
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        gs - 110,
@@ -276,7 +234,7 @@ SELECT gs,
        450.00
 FROM generate_series(111, 120) gs;
 
--- B+ (units 121-125, donors 11-15)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        gs - 110,
@@ -286,7 +244,7 @@ SELECT gs,
        450.00
 FROM generate_series(121, 125) gs;
 
--- A+ (units 126-128, donors 19-21)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        gs - 107,
@@ -296,7 +254,7 @@ SELECT gs,
        450.00
 FROM generate_series(126, 128) gs;
 
--- O- (units 129-130, donors 30-31)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        gs - 99,
@@ -307,11 +265,7 @@ SELECT gs,
 FROM generate_series(129, 130) gs;
 
 
--- === EXPIRED UNITS (131-150) ===
--- Inserted with status='EXPIRED' directly.
--- The BEFORE INSERT trigger only acts on status='AVAILABLE', so these are safe.
 
--- O+ (units 131-138, donors 1-8)
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        gs - 130,
@@ -321,7 +275,7 @@ SELECT gs,
        450.00
 FROM generate_series(131, 138) gs;
 
--- B+ (units 139-143, donors 11-15)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        gs - 128,
@@ -331,7 +285,7 @@ SELECT gs,
        450.00
 FROM generate_series(139, 143) gs;
 
--- A+ (units 144-147, donors 19-22)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        gs - 125,
@@ -341,7 +295,7 @@ SELECT gs,
        450.00
 FROM generate_series(144, 147) gs;
 
--- AB- (units 148-150, donors 39,40,39)
+
 INSERT INTO blood_units (unit_id, donor_id, collection_date, expiration_date, status, volume_ml)
 SELECT gs,
        CASE WHEN (gs - 148) % 2 = 0 THEN 39 ELSE 40 END,
@@ -352,19 +306,10 @@ SELECT gs,
 FROM generate_series(148, 150) gs;
 
 
--- ────────────────────────────────────────────────────────────────────────────
--- 4. BLOOD REQUESTS (40 rows)
---    Status distribution:
---      Requests  1-17 : FULFILLED  (units reserved and/or issued)
---      Requests 18-22 : PARTIAL    (partially fulfilled)
---      Requests 23-35 : PENDING    (awaiting reservation)
---      Requests 36-40 : CANCELLED
--- ────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO blood_requests (request_id, hospital_id, requested_blood_group, requested_rh_factor, quantity, urgency, fulfillment_status, requested_at, fulfilled_at)
 VALUES
--- ── FULFILLED (1-17): blood type matches reserved/used unit donors ──
--- Requests 1-7 have USED units (blood already issued to hospital)
+       
 ( 1,  1, 'O',  'POSITIVE',  3, 'EMERGENCY', 'FULFILLED', '2026-05-10 08:00:00+05:30', '2026-05-10 08:45:00+05:30'),
 ( 2,  2, 'O',  'POSITIVE',  3, 'URGENT',    'FULFILLED', '2026-05-12 09:00:00+05:30', '2026-05-12 09:30:00+05:30'),
 ( 3,  3, 'O',  'POSITIVE',  4, 'EMERGENCY', 'FULFILLED', '2026-05-14 10:00:00+05:30', '2026-05-14 10:20:00+05:30'),
@@ -372,7 +317,7 @@ VALUES
 ( 5,  5, 'B',  'POSITIVE',  2, 'ROUTINE',   'FULFILLED', '2026-05-18 14:00:00+05:30', '2026-05-18 14:30:00+05:30'),
 ( 6,  6, 'A',  'POSITIVE',  3, 'URGENT',    'FULFILLED', '2026-05-20 09:30:00+05:30', '2026-05-20 10:00:00+05:30'),
 ( 7,  7, 'O',  'NEGATIVE',  2, 'EMERGENCY', 'FULFILLED', '2026-05-22 07:00:00+05:30', '2026-05-22 07:20:00+05:30'),
--- Requests 8-17 have RESERVED units (blood allocated but not yet issued)
+       
 ( 8,  8, 'O',  'POSITIVE',  5, 'ROUTINE',   'FULFILLED', '2026-06-10 10:00:00+05:30', '2026-06-10 10:30:00+05:30'),
 ( 9,  9, 'O',  'POSITIVE',  5, 'URGENT',    'FULFILLED', '2026-06-11 11:00:00+05:30', '2026-06-11 11:20:00+05:30'),
 (10, 10, 'O',  'POSITIVE',  5, 'ROUTINE',   'FULFILLED', '2026-06-12 09:00:00+05:30', '2026-06-12 09:15:00+05:30'),
@@ -384,14 +329,14 @@ VALUES
 (16,  6, 'A',  'POSITIVE',  4, 'EMERGENCY', 'FULFILLED', '2026-06-18 08:00:00+05:30', '2026-06-18 08:15:00+05:30'),
 (17,  7, 'AB', 'POSITIVE',  4, 'ROUTINE',   'FULFILLED', '2026-06-19 14:00:00+05:30', '2026-06-19 14:30:00+05:30'),
 
--- ── PARTIAL (18-22): requested more than available ──
+       
 (18,  8, 'O',  'NEGATIVE',  6, 'EMERGENCY', 'PARTIAL',   '2026-06-20 07:30:00+05:30', NULL),
 (19,  9, 'O',  'NEGATIVE',  4, 'URGENT',    'PARTIAL',   '2026-06-21 09:00:00+05:30', NULL),
 (20, 10, 'B',  'NEGATIVE',  8, 'EMERGENCY', 'PARTIAL',   '2026-06-22 08:00:00+05:30', NULL),
 (21,  1, 'A',  'NEGATIVE',  5, 'URGENT',    'PARTIAL',   '2026-06-23 10:00:00+05:30', NULL),
 (22,  2, 'AB', 'NEGATIVE',  4, 'EMERGENCY', 'PARTIAL',   '2026-06-24 07:00:00+05:30', NULL),
 
--- ── PENDING (23-35): awaiting reservation ──
+       
 (23,  3, 'O',  'POSITIVE',  3, 'ROUTINE',   'PENDING',   '2026-07-01 10:00:00+05:30', NULL),
 (24,  4, 'B',  'POSITIVE',  2, 'URGENT',    'PENDING',   '2026-07-01 11:00:00+05:30', NULL),
 (25,  5, 'A',  'POSITIVE',  4, 'EMERGENCY', 'PENDING',   '2026-07-02 08:00:00+05:30', NULL),
@@ -406,7 +351,7 @@ VALUES
 (34,  4, 'O',  'POSITIVE',  4, 'EMERGENCY', 'PENDING',   '2026-07-06 07:00:00+05:30', NULL),
 (35,  5, 'O',  'NEGATIVE',  3, 'ROUTINE',   'PENDING',   '2026-07-07 14:00:00+05:30', NULL),
 
--- ── CANCELLED (36-40) ──
+       
 (36,  6, 'O',  'POSITIVE',  2, 'ROUTINE',   'CANCELLED', '2026-06-25 10:00:00+05:30', NULL),
 (37,  7, 'B',  'POSITIVE',  3, 'ROUTINE',   'CANCELLED', '2026-06-26 11:00:00+05:30', NULL),
 (38,  8, 'A',  'POSITIVE',  1, 'URGENT',    'CANCELLED', '2026-06-27 09:30:00+05:30', NULL),
@@ -414,127 +359,116 @@ VALUES
 (40, 10, 'AB', 'POSITIVE',  2, 'ROUTINE',   'CANCELLED', '2026-06-29 10:00:00+05:30', NULL);
 
 
--- ────────────────────────────────────────────────────────────────────────────
--- 5. UNIT RESERVATIONS (80 rows)
---    Each unit_id appears EXACTLY ONCE (enforced by uq_reservation_unit).
---    Blood type of the unit's donor matches the request's blood type.
--- ────────────────────────────────────────────────────────────────────────────
+
 
 INSERT INTO unit_reservations (reservation_id, unit_id, request_id, reserved_at)
 VALUES
--- ── FULFILLED requests with USED units (requests 1-7) ──
--- Request 1: O+ qty 3, units 111-113 (donors 1-3 = O+)
+       
 ( 1, 111,  1, '2026-05-10 08:30:00+05:30'),
 ( 2, 112,  1, '2026-05-10 08:30:01+05:30'),
 ( 3, 113,  1, '2026-05-10 08:30:02+05:30'),
--- Request 2: O+ qty 3, units 114-116 (donors 4-6 = O+)
+       
 ( 4, 114,  2, '2026-05-12 09:15:00+05:30'),
 ( 5, 115,  2, '2026-05-12 09:15:01+05:30'),
 ( 6, 116,  2, '2026-05-12 09:15:02+05:30'),
--- Request 3: O+ qty 4, units 117-120 (donors 7-10 = O+)
+       
 ( 7, 117,  3, '2026-05-14 10:10:00+05:30'),
 ( 8, 118,  3, '2026-05-14 10:10:01+05:30'),
 ( 9, 119,  3, '2026-05-14 10:10:02+05:30'),
 (10, 120,  3, '2026-05-14 10:10:03+05:30'),
--- Request 4: B+ qty 3, units 121-123 (donors 11-13 = B+)
+       
 (11, 121,  4, '2026-05-16 11:10:00+05:30'),
 (12, 122,  4, '2026-05-16 11:10:01+05:30'),
 (13, 123,  4, '2026-05-16 11:10:02+05:30'),
--- Request 5: B+ qty 2, units 124-125 (donors 14-15 = B+)
+       
 (14, 124,  5, '2026-05-18 14:15:00+05:30'),
 (15, 125,  5, '2026-05-18 14:15:01+05:30'),
--- Request 6: A+ qty 3, units 126-128 (donors 19-21 = A+)
+       
 (16, 126,  6, '2026-05-20 09:45:00+05:30'),
 (17, 127,  6, '2026-05-20 09:45:01+05:30'),
 (18, 128,  6, '2026-05-20 09:45:02+05:30'),
--- Request 7: O- qty 2, units 129-130 (donors 30-31 = O-)
+       
 (19, 129,  7, '2026-05-22 07:10:00+05:30'),
 (20, 130,  7, '2026-05-22 07:10:01+05:30'),
 
--- ── FULFILLED requests with RESERVED units (requests 8-17) ──
--- Request 8: O+ qty 5, units 51-55 (donors 1-5 = O+)
+       
 (21,  51,  8, '2026-06-10 10:15:00+05:30'),
 (22,  52,  8, '2026-06-10 10:15:01+05:30'),
 (23,  53,  8, '2026-06-10 10:15:02+05:30'),
 (24,  54,  8, '2026-06-10 10:15:03+05:30'),
 (25,  55,  8, '2026-06-10 10:15:04+05:30'),
--- Request 9: O+ qty 5, units 56-60 (donors 6-10 = O+)
+       
 (26,  56,  9, '2026-06-11 11:10:00+05:30'),
 (27,  57,  9, '2026-06-11 11:10:01+05:30'),
 (28,  58,  9, '2026-06-11 11:10:02+05:30'),
 (29,  59,  9, '2026-06-11 11:10:03+05:30'),
 (30,  60,  9, '2026-06-11 11:10:04+05:30'),
--- Request 10: O+ qty 5, units 61-65 (donors 1-5 = O+)
+       
 (31,  61, 10, '2026-06-12 09:05:00+05:30'),
 (32,  62, 10, '2026-06-12 09:05:01+05:30'),
 (33,  63, 10, '2026-06-12 09:05:02+05:30'),
 (34,  64, 10, '2026-06-12 09:05:03+05:30'),
 (35,  65, 10, '2026-06-12 09:05:04+05:30'),
--- Request 11: O+ qty 5, units 66-70 (donors 6-10 = O+)
+       
 (36,  66, 11, '2026-06-13 08:40:00+05:30'),
 (37,  67, 11, '2026-06-13 08:40:01+05:30'),
 (38,  68, 11, '2026-06-13 08:40:02+05:30'),
 (39,  69, 11, '2026-06-13 08:40:03+05:30'),
 (40,  70, 11, '2026-06-13 08:40:04+05:30'),
--- Request 12: B+ qty 4, units 71-74 (donors 11-14 = B+)
+       
 (41,  71, 12, '2026-06-14 10:10:00+05:30'),
 (42,  72, 12, '2026-06-14 10:10:01+05:30'),
 (43,  73, 12, '2026-06-14 10:10:02+05:30'),
 (44,  74, 12, '2026-06-14 10:10:03+05:30'),
--- Request 13: B+ qty 4, units 75-78 (donors 15-18 = B+)
+       
 (45,  75, 13, '2026-06-15 11:35:00+05:30'),
 (46,  76, 13, '2026-06-15 11:35:01+05:30'),
 (47,  77, 13, '2026-06-15 11:35:02+05:30'),
 (48,  78, 13, '2026-06-15 11:35:03+05:30'),
--- Request 14: B+ qty 4, units 79-82 (donors 11-14 = B+)
+       
 (49,  79, 14, '2026-06-16 09:10:00+05:30'),
 (50,  80, 14, '2026-06-16 09:10:01+05:30'),
 (51,  81, 14, '2026-06-16 09:10:02+05:30'),
 (52,  82, 14, '2026-06-16 09:10:03+05:30'),
--- Request 15: A+ qty 4, units 83-86 (donors 19-22 = A+)
+       
 (53,  83, 15, '2026-06-17 10:40:00+05:30'),
 (54,  84, 15, '2026-06-17 10:40:01+05:30'),
 (55,  85, 15, '2026-06-17 10:40:02+05:30'),
 (56,  86, 15, '2026-06-17 10:40:03+05:30'),
--- Request 16: A+ qty 4, units 87-90 (donors 23-25,19 = A+)
+       
 (57,  87, 16, '2026-06-18 08:05:00+05:30'),
 (58,  88, 16, '2026-06-18 08:05:01+05:30'),
 (59,  89, 16, '2026-06-18 08:05:02+05:30'),
 (60,  90, 16, '2026-06-18 08:05:03+05:30'),
--- Request 17: AB+ qty 4, units 91-94 (donors 26-29 = AB+)
+       
 (61,  91, 17, '2026-06-19 14:10:00+05:30'),
 (62,  92, 17, '2026-06-19 14:10:01+05:30'),
 (63,  93, 17, '2026-06-19 14:10:02+05:30'),
 (64,  94, 17, '2026-06-19 14:10:03+05:30'),
 
--- ── PARTIAL requests (18-22): fewer units than requested ──
--- Request 18: O- qty 6 got 4, units 95-98 (donors 30-33 = O-)
+       
 (65,  95, 18, '2026-06-20 07:45:00+05:30'),
 (66,  96, 18, '2026-06-20 07:45:01+05:30'),
 (67,  97, 18, '2026-06-20 07:45:02+05:30'),
 (68,  98, 18, '2026-06-20 07:45:03+05:30'),
--- Request 19: O- qty 4 got 2, units 99-100 (donors 30-31 = O-)
+       
 (69,  99, 19, '2026-06-21 09:15:00+05:30'),
 (70, 100, 19, '2026-06-21 09:15:01+05:30'),
--- Request 20: B- qty 8 got 5, units 101-105 (donors 34-36 = B-)
+       
 (71, 101, 20, '2026-06-22 08:20:00+05:30'),
 (72, 102, 20, '2026-06-22 08:20:01+05:30'),
 (73, 103, 20, '2026-06-22 08:20:02+05:30'),
 (74, 104, 20, '2026-06-22 08:20:03+05:30'),
 (75, 105, 20, '2026-06-22 08:20:04+05:30'),
--- Request 21: A- qty 5 got 3, units 106-108 (donors 37-38 = A-)
+       
 (76, 106, 21, '2026-06-23 10:15:00+05:30'),
 (77, 107, 21, '2026-06-23 10:15:01+05:30'),
 (78, 108, 21, '2026-06-23 10:15:02+05:30'),
--- Request 22: AB- qty 4 got 2, units 109-110 (donors 39-40 = AB-)
+       
 (79, 109, 22, '2026-06-24 07:20:00+05:30'),
 (80, 110, 22, '2026-06-24 07:20:01+05:30');
 
 
--- ────────────────────────────────────────────────────────────────────────────
--- 6. RESET SERIAL SEQUENCES
---    After explicit-ID inserts, re-sync auto-increment counters.
--- ────────────────────────────────────────────────────────────────────────────
 
 SELECT setval('donors_donor_id_seq',             (SELECT MAX(donor_id)      FROM donors));
 SELECT setval('blood_units_unit_id_seq',         (SELECT MAX(unit_id)       FROM blood_units));
@@ -543,9 +477,7 @@ SELECT setval('blood_requests_request_id_seq',   (SELECT MAX(request_id)    FROM
 SELECT setval('unit_reservations_reservation_id_seq', (SELECT MAX(reservation_id) FROM unit_reservations));
 
 
--- ────────────────────────────────────────────────────────────────────────────
--- 7. VERIFICATION COUNTS
--- ────────────────────────────────────────────────────────────────────────────
+
 
 DO $$
 DECLARE
@@ -573,6 +505,4 @@ BEGIN
 END $$;
 
 COMMIT;
--- ============================================================================
--- END OF SEED DATA
--- ============================================================================
+
