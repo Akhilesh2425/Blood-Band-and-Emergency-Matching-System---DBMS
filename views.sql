@@ -1,27 +1,7 @@
--- ============================================================================
--- Blood Bank & Emergency Donor-Matching System
--- Reusable SQL Views — PostgreSQL
--- ============================================================================
--- DEPENDENCY: Execute schema.sql → triggers.sql → procedures.sql → seed.sql
---
--- All views use CREATE OR REPLACE VIEW (idempotent).
--- Materialized views use CREATE MATERIALIZED VIEW IF NOT EXISTS +
---   a REFRESH command.
--- ============================================================================
 
-
--- ────────────────────────────────────────────────────────────────────────────
--- 0. CLEAN SLATE — drop materialized views (cannot use CREATE OR REPLACE)
--- ────────────────────────────────────────────────────────────────────────────
 DROP MATERIALIZED VIEW IF EXISTS mv_inventory_dashboard CASCADE;
 DROP MATERIALIZED VIEW IF EXISTS mv_monthly_report      CASCADE;
 
-
--- ============================================================================
--- VIEW 1: vw_available_inventory
--- Real-time count of available (non-expired) blood units by blood type.
--- Joins blood_units → donors to resolve blood type (3NF).
--- ============================================================================
 CREATE OR REPLACE VIEW vw_available_inventory AS
 SELECT d.blood_group,
        d.rh_factor,
@@ -41,11 +21,6 @@ COMMENT ON VIEW vw_available_inventory IS
     'Real-time available blood inventory grouped by blood type. '
     'Excludes expired units. Resolves blood type via donor join (3NF).';
 
-
--- ============================================================================
--- VIEW 2: vw_hospital_statistics
--- Per-hospital request counts, fulfillment rates, and demand totals.
--- ============================================================================
 CREATE OR REPLACE VIEW vw_hospital_statistics AS
 SELECT h.hospital_id,
        h.name                                                                  AS hospital_name,
@@ -70,11 +45,6 @@ COMMENT ON VIEW vw_hospital_statistics IS
     'Per-hospital statistics: request counts by fulfillment status, '
     'total demand, and fulfillment percentage.';
 
-
--- ============================================================================
--- VIEW 3: vw_monthly_donations
--- Monthly aggregation of blood unit collections.
--- ============================================================================
 CREATE OR REPLACE VIEW vw_monthly_donations AS
 SELECT date_trunc('month', bu.collection_date)::DATE AS month,
        COUNT(*)                                       AS units_collected,
@@ -89,11 +59,6 @@ COMMENT ON VIEW vw_monthly_donations IS
     'Monthly blood donation report: units collected, unique donors, '
     'and volume statistics.';
 
-
--- ============================================================================
--- VIEW 4: vw_donor_statistics
--- Per-donor donation history, activity status, and ranking.
--- ============================================================================
 CREATE OR REPLACE VIEW vw_donor_statistics AS
 SELECT d.donor_id,
        d.first_name || ' ' || d.last_name  AS donor_name,
@@ -124,10 +89,6 @@ COMMENT ON VIEW vw_donor_statistics IS
     'and computed activity status.';
 
 
--- ============================================================================
--- VIEW 5: vw_blood_group_summary
--- Distribution of registered donors by blood type.
--- ============================================================================
 CREATE OR REPLACE VIEW vw_blood_group_summary AS
 SELECT d.blood_group,
        d.rh_factor,
@@ -151,10 +112,7 @@ COMMENT ON VIEW vw_blood_group_summary IS
     'unit counts.';
 
 
--- ============================================================================
--- VIEW 6: vw_request_summary
--- All blood requests with hospital info and reservation progress.
--- ============================================================================
+
 CREATE OR REPLACE VIEW vw_request_summary AS
 SELECT br.request_id,
        h.name                              AS hospital_name,
@@ -187,10 +145,7 @@ COMMENT ON VIEW vw_request_summary IS
     'fulfillment status, reserved count, and urgency ranking.';
 
 
--- ============================================================================
--- VIEW 7: vw_reservation_summary
--- Detailed reservation audit trail joining all five tables.
--- ============================================================================
+
 CREATE OR REPLACE VIEW vw_reservation_summary AS
 SELECT ur.reservation_id,
        ur.reserved_at,
@@ -218,11 +173,6 @@ COMMENT ON VIEW vw_reservation_summary IS
     'Full reservation audit trail: unit → donor → request → hospital. '
     'Useful for traceability and compliance reporting.';
 
-
--- ============================================================================
--- VIEW 8: vw_expiry_dashboard
--- Blood units approaching expiry, grouped by urgency tier.
--- ============================================================================
 CREATE OR REPLACE VIEW vw_expiry_dashboard AS
 SELECT bu.unit_id,
        d.blood_group,
@@ -249,10 +199,7 @@ COMMENT ON VIEW vw_expiry_dashboard IS
     'days remaining and urgency tier classification.';
 
 
--- ============================================================================
--- VIEW 9: vw_hospital_demand
--- Aggregated demand per hospital per blood type (pending + partial only).
--- ============================================================================
+
 CREATE OR REPLACE VIEW vw_hospital_demand AS
 SELECT h.hospital_id,
        h.name                     AS hospital_name,
@@ -279,10 +226,7 @@ COMMENT ON VIEW vw_hospital_demand IS
     'PENDING and PARTIAL requests.';
 
 
--- ============================================================================
--- VIEW 10: vw_blood_utilization
--- Blood utilization and wastage rates by blood type.
--- ============================================================================
+
 CREATE OR REPLACE VIEW vw_blood_utilization AS
 SELECT d.blood_group,
        d.rh_factor,
@@ -305,11 +249,7 @@ COMMENT ON VIEW vw_blood_utilization IS
     'Helps identify supply chain inefficiencies.';
 
 
--- ============================================================================
--- MATERIALIZED VIEW 1: mv_inventory_dashboard
--- Snapshot of complete inventory state for fast dashboard rendering.
--- Must be refreshed periodically: REFRESH MATERIALIZED VIEW mv_inventory_dashboard;
--- ============================================================================
+
 CREATE MATERIALIZED VIEW mv_inventory_dashboard AS
 SELECT d.blood_group,
        d.rh_factor,
@@ -328,15 +268,11 @@ COMMENT ON MATERIALIZED VIEW mv_inventory_dashboard IS
     'Materialised snapshot of inventory grouped by blood type and status. '
     'Refresh with: REFRESH MATERIALIZED VIEW mv_inventory_dashboard;';
 
--- Create index on the materialized view for fast lookups
+
 CREATE INDEX idx_mv_inv_blood_type
     ON mv_inventory_dashboard (blood_group, rh_factor);
 
 
--- ============================================================================
--- MATERIALIZED VIEW 2: mv_monthly_report
--- Pre-computed monthly statistics for reporting.
--- ============================================================================
 CREATE MATERIALIZED VIEW mv_monthly_report AS
 WITH months AS (
     SELECT DISTINCT date_trunc('month', collection_date)::DATE AS month
